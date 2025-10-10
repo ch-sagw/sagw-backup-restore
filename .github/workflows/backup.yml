@@ -16,6 +16,8 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
+      - name: Install dependencies
+        run: npm install
       - name: Lint
         run: npm run lint
       - name: DB Backup
