@@ -20,7 +20,7 @@ on:
         description: 'Do you want to restore DB or Blob?'
         required: true
         default: 'db'
-        type: 'choice'
+        type: choice
         options:
           - db
           - blob
