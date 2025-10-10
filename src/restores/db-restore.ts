@@ -27,11 +27,14 @@ const main = async (): Promise<void> => {
   const dbHelper = new DbHelper();
 
   try {
-    const proceedMessage = `Restore DB from S3 to OVH. ${chalk.red('This is a destructive process. Collections from the backup will overwrite the existing collections in MongoDB.')}`;
-    const proceed = await inquirerAskForProceed(proceedMessage);
 
-    if (!proceed) {
-      throw new Error('User aborted.');
+    if (!process.env.CI) {
+      const proceedMessage = `Restore DB from S3 to OVH. ${chalk.red('This is a destructive process. Collections from the backup will overwrite the existing collections in MongoDB.')}`;
+      const proceed = await inquirerAskForProceed(proceedMessage);
+
+      if (!proceed) {
+        throw new Error('User aborted.');
+      }
     }
 
     const s3Helper = new S3Helper();
@@ -41,16 +44,29 @@ const main = async (): Promise<void> => {
       throw new Error('no backups found to restore');
     }
 
-    const selectedBucket = await inquirerAskBucketToRestore(sortedBuckets);
+    let selectedBucket;
+
+    if (process.env.CI) {
+      selectedBucket = process.env.DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB;
+    } else {
+      selectedBucket = await inquirerAskBucketToRestore(sortedBuckets);
+    }
+
+    if (!selectedBucket) {
+      throw new Error('No bucket selection. Aborting.');
+    }
+
     const allObjectsInBucket = await s3Helper.listObjectsOfBucket(selectedBucket);
 
-    const finalConfirmationMessage = `I am about to restore all collections from S3 Bucket named ${chalk.green(selectedBucket)} to MongoDB. Are you sure you want to continue?`;
-    const finalConfirmation = await inquirerAskForProceed(finalConfirmationMessage);
+    if (!process.env.CI) {
+      const finalConfirmationMessage = `I am about to restore all collections from S3 Bucket named ${chalk.green(selectedBucket)} to MongoDB. Are you sure you want to continue?`;
+      const finalConfirmation = await inquirerAskForProceed(finalConfirmationMessage);
 
-    if (!finalConfirmation) {
-      console.log('aborting');
+      if (!finalConfirmation) {
+        console.log('aborting');
 
-      return;
+        return;
+      }
     }
 
     if (!process.env.DATABASE_URI) {
