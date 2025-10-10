@@ -2,6 +2,11 @@
 
 Helpers for various tasks concerning backup and restore of Vercel blob data and MongoDB to S3.
 
+## Prerequisities
+
+- Make sure you provide all neccessary env variables
+- If you want to run tasks locally, you must have mongo db-tools installed on your machine: https://www.mongodb.com/docs/database-tools/installation/?operating-system=linux&package-type=deb
+
 ## Scripts
 
 - blob-backup, db-backup und backups-cleanup are run as cron jobs on a regular basis.
