@@ -1,0 +1,37 @@
+{
+  "name": "sagw-backup-restore",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
+    "backup:db": "cross-env ENV=prod tsx ./src/cron-jobs/db-backup",
+    "backup:blob": "cross-env ENV=prod tsx ./src/cron-jobs/blob-backup",
+    "backup:cleanup": "cross-env ENV=prod tsx ./src/cron-jobs/backups-cleanup",
+    "restore:blob:prod": "cross-env ENV=prod tsx ./src/restores/blob-restore",
+    "restore:db:prod": "cross-env ENV=prod tsx ./src/restores/db-restore",
+    "maintenance": "cross-env ENV=prod tsx ./src/maintenance/index",
+    "replicate:prod": "tsx ./src/restores/replicate-prod"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.907.0",
+    "@aws-sdk/lib-storage": "^3.907.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.37.0",
+    "@types/node": "^24.7.1",
+    "@vercel/blob": "^2.0.0",
+    "boxen": "^8.0.1",
+    "bson": "^6.10.4",
+    "chalk": "^5.6.2",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.37.0",
+    "inquirer": "^12.9.6",
+    "mongodb": "^6.20.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

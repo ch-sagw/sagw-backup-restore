@@ -1,0 +1,10 @@
+node_modules
+prod-download
+
+# local env files
+/.env/.env*
+!/.env/.env.base.example
+!/.env/.env.prod.example
+!/.env/.env.test.example
+!/.env/.env.local.example
+!/.env/.env.playwright.example
