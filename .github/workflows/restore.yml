@@ -1,0 +1,74 @@
+name: Backup
+permissions:
+  checks: write
+  pull-requests: write
+  statuses: write
+env:
+  OVH_OS_ACCESS_PUBLIC_KEY: ${{ secrets.OVH_OS_ACCESS_PUBLIC_KEY }}
+  OVH_OS_ACCESS_PRIVATE_KEY: ${{ secrets.OVH_OS_ACCESS_PRIVATE_KEY }}
+  OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT: ${{ secrets.OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+  DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+  DATABASE_URI: ${{ secrets.DATABASE_URI }}
+  BACKUP_RESTORE_PREFIX: ${{ secrets.BACKUP_RESTORE_PREFIX }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Do you want to restore DB or Blob?'
+        required: true
+        default: 'db'
+        type: 'choice'
+        options:
+          - db
+          - blob
+      backupName:
+        description: 'Provide the bucket name which contains the backup to restore (from OVH)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type "YES RESTORE" to confirm restore'
+        required: true
+
+jobs:
+  restore:
+    if: ${{ github.event.inputs.confirm == 'YES RESTORE' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Lint
+        run: npm run lint
+
+      - name: Install & Setup mongodb-tools
+        if: ${{ github.event.inputs.type == 'db' }}
+        run: |
+          wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.6.1.deb
+          sudo apt install ./mongodb-database-tools-*-100.6.1.deb
+
+      - name: DB Restore
+        if: ${{ github.event.inputs.type == 'db' }}
+        run: npm run restore:db
+        env:
+          DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB: ${{ github.event.inputs.backupName }}
+          CI: true
+
+      - name: Blob Restore
+        if: ${{ github.event.inputs.type == 'blob' }}
+        run: npm run restore:blob
+        env:
+          DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB: ${{ github.event.inputs.backupName }}
+          CI: true
+
+
+
+
+
+

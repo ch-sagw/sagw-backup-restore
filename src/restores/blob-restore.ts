@@ -18,11 +18,19 @@ import {
 const main = async (): Promise<void> => {
   try {
 
-    const proceedMessage = `Restore blob storage from S3 to Vercel. ${chalk.red('This is a destructive process. All data from Vercel Blob will be deleted in order to restore the data from the S3 Backup')}`;
-    const proceed = await inquirerAskForProceed(proceedMessage);
+    if (process.env.CI) {
+      if (!process.env.DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB) {
+        throw new Error('env var DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB not defined. Aborting.');
+      }
+    }
 
-    if (!proceed) {
-      throw new Error('User aborted.');
+    if (!process.env.CI) {
+      const proceedMessage = `Restore blob storage from S3 to Vercel. ${chalk.red('This is a destructive process. All data from Vercel Blob will be deleted in order to restore the data from the S3 Backup')}`;
+      const proceed = await inquirerAskForProceed(proceedMessage);
+
+      if (!proceed) {
+        throw new Error('User aborted.');
+      }
     }
 
     const s3Helper = new S3Helper();
@@ -32,17 +40,30 @@ const main = async (): Promise<void> => {
       throw new Error('no backups found to restore');
     }
 
-    const selectedBucket = await inquirerAskBucketToRestore(sortedBlockBuckets);
+    let selectedBucket;
+
+    if (process.env.CI) {
+      selectedBucket = process.env.DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB;
+    } else {
+      selectedBucket = await inquirerAskBucketToRestore(sortedBlockBuckets);
+    }
+
+    if (!selectedBucket) {
+      throw new Error('No bucket selection. Aborting.');
+    }
+
     const allObjectsInBucket = await s3Helper.listObjectsOfBucket(selectedBucket);
     const allBlobs = await blobHelpers.getAllBlobs();
 
-    const finalConfirmationMessage = `I am about to delete ${chalk.red(allBlobs.length)} objects in Vercel Blob and restore ${chalk.green(allObjectsInBucket.length)} objects from S3 Bucket named ${chalk.green(selectedBucket)} to Vercel blob. Are you sure you want to continue?`;
-    const finalConfirmation = await inquirerAskForProceed(finalConfirmationMessage);
+    if (!process.env.CI) {
+      const finalConfirmationMessage = `I am about to delete ${chalk.red(allBlobs.length)} objects in Vercel Blob and restore ${chalk.green(allObjectsInBucket.length)} objects from S3 Bucket named ${chalk.green(selectedBucket)} to Vercel blob. Are you sure you want to continue?`;
+      const finalConfirmation = await inquirerAskForProceed(finalConfirmationMessage);
 
-    if (!finalConfirmation) {
-      console.log('aborting');
+      if (!finalConfirmation) {
+        console.log('aborting');
 
-      return;
+        return;
+      }
     }
 
     await blobHelpers.deleteAllBlobs();
