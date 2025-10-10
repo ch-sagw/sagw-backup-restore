@@ -102,12 +102,10 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
         BLOB_READ_WRITE_TOKEN: otherEnvToken,
       },
       {
-        debug: true,
+        debug: false,
         override: true,
       },
     );
-
-    console.log(process.env.BLOB_READ_WRITE_TOKEN);
 
     await deleteAllBlobs();
 
