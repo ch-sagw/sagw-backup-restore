@@ -11,6 +11,7 @@ import { exec } from '@/helpers/promisifyExec';
 import fs from 'fs';
 import path from 'path';
 import config from '@/config';
+import dotenv from 'dotenv';
 
 type InterfaceReplicationEnvs = 'local' | 'test';
 
@@ -90,6 +91,24 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
       throw new Error('Env-Var mismatch for BLOB_READ_WRITE_TOKEN. Aborting.');
     }
 
+    if (!otherEnvToken) {
+      throw new Error('BLOB_READ_WRITE_TOKEN for Target env missing. Aborting.');
+    }
+
+    // switch blob env to other env
+    dotenv.populate(
+      process.env,
+      {
+        BLOB_READ_WRITE_TOKEN: otherEnvToken,
+      },
+      {
+        debug: true,
+        override: true,
+      },
+    );
+
+    console.log(process.env.BLOB_READ_WRITE_TOKEN);
+
     await deleteAllBlobs();
 
     let blobCounter = 0;
@@ -164,13 +183,13 @@ const main = async (): Promise<void> => {
     dbHelperSource = new DbHelper();
 
     if (!process.env.CI) {
-      const askForProceed = await inquirerAskForProceed('I will erase all collections in the local DB, and replicate the collections from Prod to the Local  DB. Are you sure you want to continue?');
+      const askForProceed = await inquirerAskForProceed('I will erase all collections in the local DB, and replicate the collections from Prod to the Local DB. Are you sure you want to continue?');
 
       if (!askForProceed) {
         throw new Error('Aborting.');
       }
 
-      const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Local and replicate all Blobs from Prod to Test. Are you sure you want to continue?');
+      const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Local and replicate all Blobs from Prod to Local. Are you sure you want to continue?');
 
       if (!askForProceed2) {
         throw new Error('Aborting.');
