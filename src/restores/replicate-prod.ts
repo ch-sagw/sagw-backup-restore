@@ -97,7 +97,7 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
 
     // switch blob env to other env
     dotenv.populate(
-      process.env,
+      process.env as Record<string, string>,
       {
         BLOB_READ_WRITE_TOKEN: otherEnvToken,
       },
