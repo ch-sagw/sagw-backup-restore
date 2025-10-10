@@ -14,11 +14,8 @@ env:
   BACKUP_RESTORE_PREFIX: ${{ secrets.BACKUP_RESTORE_PREFIX }}
 
 on:
-  push:
-    branches:
-      - 'main'
-  # schedule:
-  #   - cron: "0 2 * * *"
+  schedule:
+    - cron: "0 2 * * *"
 jobs:
   backup-db:
     runs-on: ubuntu-latest
