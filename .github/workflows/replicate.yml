@@ -1,4 +1,4 @@
-name: Restore Prod from Backup
+name: Replicate Prod to Test
 
 permissions:
   checks: write
@@ -18,25 +18,13 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      type:
-        description: 'Do you want to restore DB or Blob?'
-        required: true
-        default: db
-        type: choice
-        options:
-          - db
-          - blob
-      backupName:
-        description: 'Provide the bucket name which contains the backup to restore (from OVH)'
-        required: true
-        type: string
       confirm:
-        description: 'Type "YES RESTORE" to confirm restore. Caution: THIS CAN NOT BE UNDONE!'
+        description: 'Type "YES REPLICATE" to confirm replication. CAUTION: THIS CAN NOT BE UNDONE!'
         required: true
 
 jobs:
   restore:
-    if: ${{ github.event.inputs.confirm == 'YES RESTORE' }}
+    if: ${{ github.event.inputs.confirm == 'YES REPLICATE' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -54,21 +42,12 @@ jobs:
         run: npm run lint
 
       - name: Install & Setup mongodb-tools
-        if: ${{ github.event.inputs.type == 'db' }}
         run: |
           wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.6.1.deb
           sudo apt install ./mongodb-database-tools-*-100.6.1.deb
 
-      - name: DB Restore
-        if: ${{ github.event.inputs.type == 'db' }}
-        run: npm run restore:db
+      - name: Replicate
+        run: npm run replicate:prod
         env:
-          DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB: ${{ github.event.inputs.backupName }}
           CI: true
 
-      - name: Blob Restore
-        if: ${{ github.event.inputs.type == 'blob' }}
-        run: npm run restore:blob
-        env:
-          DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB: ${{ github.event.inputs.backupName }}
-          CI: true

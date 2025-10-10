@@ -200,26 +200,35 @@ const main = async (): Promise<void> => {
 
     dbHelperSource = new DbHelper();
 
-    const askForProceed = await inquirerAskForProceed('I will erase all collections in the local and test DB\'s, and replicate the collections from Prod to the Local and Test DB. Are you sure you want to continue?');
+    if (!process.env.CI) {
+      const askForProceed = await inquirerAskForProceed('I will erase all collections in the local and test DB\'s, and replicate the collections from Prod to the Local and Test DB. Are you sure you want to continue?');
 
-    if (!askForProceed) {
-      throw new Error('Aborting.');
-    }
+      if (!askForProceed) {
+        throw new Error('Aborting.');
+      }
 
-    const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Test/Local and replicate all Blobs from Prod to Test/Local. Are you sure you want to continue?');
+      const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Test/Local and replicate all Blobs from Prod to Test/Local. Are you sure you want to continue?');
 
-    if (!askForProceed2) {
-      throw new Error('Aborting.');
+      if (!askForProceed2) {
+        throw new Error('Aborting.');
+      }
     }
 
     // create db dump to local system
     await dbDump();
 
     // replicate
-    await replicateDb('test');
-    await replicateDb('local');
-    await replicateBlob('test');
-    await replicateBlob('local');
+    if (process.env.CI) {
+      await replicateDb('test');
+    } else {
+      await replicateDb('local');
+    }
+
+    if (process.env.CI) {
+      await replicateBlob('test');
+    } else {
+      await replicateBlob('local');
+    }
 
   } catch (err) {
     console.log(chalk.bgRed(err));
