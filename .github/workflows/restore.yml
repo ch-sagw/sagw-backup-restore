@@ -1,8 +1,10 @@
 name: Backup
+
 permissions:
   checks: write
   pull-requests: write
   statuses: write
+
 env:
   OVH_OS_ACCESS_PUBLIC_KEY: ${{ secrets.OVH_OS_ACCESS_PUBLIC_KEY }}
   OVH_OS_ACCESS_PRIVATE_KEY: ${{ secrets.OVH_OS_ACCESS_PRIVATE_KEY }}
@@ -19,7 +21,7 @@ on:
       type:
         description: 'Do you want to restore DB or Blob?'
         required: true
-        default: 'db'
+        default: db
         type: choice
         options:
           - db
@@ -36,14 +38,18 @@ jobs:
   restore:
     if: ${{ github.event.inputs.confirm == 'YES RESTORE' }}
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
-          cache: 'npm'
+          cache: npm
+
       - name: Install dependencies
         run: npm install
+
       - name: Lint
         run: npm run lint
 
@@ -66,9 +72,3 @@ jobs:
         env:
           DB_RESTORE_BUCKET_SELECTION_FROM_GITHUB: ${{ github.event.inputs.backupName }}
           CI: true
-
-
-
-
-
-
