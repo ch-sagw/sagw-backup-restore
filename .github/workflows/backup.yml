@@ -8,7 +8,6 @@ env:
   OVH_OS_ACCESS_PRIVATE_KEY: ${{ secrets.OVH_OS_ACCESS_PRIVATE_KEY }}
   OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT: ${{ secrets.OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT }}
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
   BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
   DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
   DATABASE_URI: ${{ secrets.DATABASE_URI }}
@@ -35,3 +34,5 @@ jobs:
         run: npm run backup:db
       - name: Blob Backup
         run: npm run backup:blob
+      - name: Cleanup Backups
+        run: npm run backup:cleanup
