@@ -14,8 +14,11 @@ env:
   BACKUP_RESTORE_PREFIX: ${{ secrets.BACKUP_RESTORE_PREFIX }}
 
 on:
-  schedule:
-    - cron: "0 2 * * *"
+  push:
+    branches:
+      - 'main'
+  # schedule:
+  #   - cron: "0 2 * * *"
 jobs:
   backup-db:
     runs-on: ubuntu-latest
@@ -29,6 +32,10 @@ jobs:
         run: npm install
       - name: Lint
         run: npm run lint
+      - name: Install & Setup mongodb-tools
+        run: |
+          wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.6.1.deb
+          sudo apt install ./mongodb-database-tools-*-100.6.1.deb
       - name: DB Backup
         run: npm run backup:db
       - name: Blob Backup
