@@ -3,6 +3,17 @@ permissions:
   checks: write
   pull-requests: write
   statuses: write
+env:
+  OVH_OS_ACCESS_PUBLIC_KEY: ${{ secrets.OVH_OS_ACCESS_PUBLIC_KEY }}
+  OVH_OS_ACCESS_PRIVATE_KEY: ${{ secrets.OVH_OS_ACCESS_PRIVATE_KEY }}
+  OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT: ${{ secrets.OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT }}
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+  DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+  DATABASE_URI: ${{ secrets.DATABASE_URI }}
+  BACKUP_RESTORE_PREFIX: ${{ secrets.BACKUP_RESTORE_PREFIX }}
+
 on:
   push:
     branches:
