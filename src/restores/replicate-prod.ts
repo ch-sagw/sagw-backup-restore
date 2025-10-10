@@ -1,5 +1,4 @@
 import chalk from 'chalk';
-import dotenv from 'dotenv';
 import { DbHelper } from '@/helpers/db';
 import { inquirerAskForProceed } from '@/helpers/inquirer';
 import { getErrorMessage } from '@/helpers/try-catch-error';
@@ -12,6 +11,8 @@ import { exec } from '@/helpers/promisifyExec';
 import fs from 'fs';
 import path from 'path';
 import config from '@/config';
+
+type InterfaceReplicationEnvs = 'local' | 'test';
 
 const dbDump = async (): Promise<void> => {
   if (!fs.existsSync(config.dbBackupTmpDir)) {
@@ -27,27 +28,17 @@ const dbDump = async (): Promise<void> => {
   await exec(command);
 };
 
-const replicateDb = async (replicateTo: string): Promise<void> => {
-
-  // ensure we start with prod env
-  dotenv.config({
-    override: true,
-    path: '.env/.env.prod',
-    quiet: true,
-  });
-
+const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void> => {
   const prodUrl = process.env.DATABASE_URI;
   const prodDbName = process.env.DATABASE_NAME;
 
-  // switch to other env
-  dotenv.config({
-    override: true,
-    path: `.env/.env.${replicateTo}`,
-    quiet: true,
-  });
+  let currentUrl = process.env.DATABASE_URI_TEST;
+  let currentDbName = process.env.DATABASE_NAME_TEST;
 
-  const currentUrl = process.env.DATABASE_URI;
-  const currentDbName = process.env.DATABASE_NAME;
+  if (replicateTo === 'local') {
+    currentUrl = process.env.DATABASE_URI_LOCAL;
+    currentDbName = process.env.DATABASE_NAME_LOCAL;
+  }
 
   if (prodUrl === currentUrl) {
     throw new Error('Env-Var mismatch for DATABASE_URI. Aborting.');
@@ -82,28 +73,18 @@ const replicateDb = async (replicateTo: string): Promise<void> => {
   }
 };
 
-const replicateBlob = async (replicateTo: string): Promise<void> => {
+const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<void> => {
   try {
-
-    // ensure we start with prod env
-    dotenv.config({
-      override: true,
-      path: '.env/.env.prod',
-      quiet: true,
-    });
 
     const prodToken = process.env.BLOB_READ_WRITE_TOKEN;
 
     const blobsProd = await getAllBlobs();
 
-    // switch to other env
-    dotenv.config({
-      override: true,
-      path: `.env/.env.${replicateTo}`,
-      quiet: true,
-    });
+    let otherEnvToken = process.env.BLOB_READ_WRITE_TOKEN_TEST;
 
-    const otherEnvToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (replicateTo === 'local') {
+      otherEnvToken = process.env.BLOB_READ_WRITE_TOKEN_LOCAL;
+    }
 
     if (prodToken === otherEnvToken) {
       throw new Error('Env-Var mismatch for BLOB_READ_WRITE_TOKEN. Aborting.');
@@ -138,31 +119,13 @@ const main = async (): Promise<void> => {
   let dbHelperSource;
 
   try {
-    // Grab DATABASE_URI and BLOB_READ_WRITE_TOKEN from all environments
-    // to make some configuration checks upfront.
-    dotenv.config({
-      override: true,
-      path: '.env/.env.local',
-      quiet: true,
-    });
+    // make some configuration checks upfront.
 
-    const localDBUri = process.env.DATABASE_URI;
-    const localBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    const localDBUri = process.env.DATABASE_URI_LOCAL;
+    const localBlobToken = process.env.BLOB_READ_WRITE_TOKEN_LOCAL;
 
-    dotenv.config({
-      override: true,
-      path: '.env/.env.test',
-      quiet: true,
-    });
-
-    const testDBUri = process.env.DATABASE_URI;
-    const testBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
-
-    dotenv.config({
-      override: true,
-      path: '.env/.env.prod',
-      quiet: true,
-    });
+    const testDBUri = process.env.DATABASE_URI_TEST;
+    const testBlobToken = process.env.BLOB_READ_WRITE_TOKEN_TEST;
 
     const prodDBUri = process.env.DATABASE_URI;
     const prodBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
