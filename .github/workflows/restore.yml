@@ -1,4 +1,4 @@
-name: Backup
+name: Restore
 
 permissions:
   checks: write
