@@ -1,0 +1,22 @@
+name: Backup
+permissions:
+  checks: write
+  pull-requests: write
+  statuses: write
+on:
+  push:
+    branches:
+      - 'main'
+jobs:
+  backup-db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Lint
+        run: npm run lint
+      - name: DB Backup
+        run: npm run backup:db
