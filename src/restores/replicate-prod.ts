@@ -8,11 +8,26 @@ import {
   deleteAllBlobs,
   getAllBlobs,
 } from '@/helpers/blob';
-import {
-  Collection, Document,
-} from 'mongodb';
+import { exec } from '@/helpers/promisifyExec';
+import fs from 'fs';
+import path from 'path';
+import config from '@/config';
 
-const replicateDb = async (replicateTo: string, dbHelperSource: DbHelper, prodDbCollections: (Collection<Document>[] | undefined)): Promise<void> => {
+const dbDump = async (): Promise<void> => {
+  if (!fs.existsSync(config.dbBackupTmpDir)) {
+    fs.mkdirSync(config.dbBackupTmpDir);
+  }
+
+  /* eslint-disable @typescript-eslint/naming-convention */
+  const __dirname = path.resolve(config.dbBackupTmpDir);
+  /* eslint-enable @typescript-eslint/naming-convention */
+  const dumpPath = path.resolve(__dirname, config.dbBackupName);
+  const command = `mongodump --uri '${process.env.DATABASE_URI}' --gzip --archive=${dumpPath}`;
+
+  await exec(command);
+};
+
+const replicateDb = async (replicateTo: string): Promise<void> => {
 
   // ensure we start with prod env
   dotenv.config({
@@ -38,38 +53,26 @@ const replicateDb = async (replicateTo: string, dbHelperSource: DbHelper, prodDb
     throw new Error('Env-Var mismatch for DATABASE_URI. Aborting.');
   }
 
+  if (!currentDbName) {
+    throw new Error('Target DB Name is not defined in Env. Aborting.');
+  }
+
   const dbHelperTarget = new DbHelper();
 
   try {
-    if (!currentDbName || !prodDbName) {
-      throw new Error('Aborting. DATABASE_NAME is not defined in env.');
-    }
+    /* eslint-disable @typescript-eslint/naming-convention */
+    const __dirname = path.resolve(config.dbBackupTmpDir);
+    /* eslint-enable @typescript-eslint/naming-convention */
+    const dumpPath = path.resolve(__dirname, config.dbBackupName);
 
-    if (!prodDbCollections) {
-      throw new Error('Aborting. No collections found in db.');
-    }
+    await dbHelperTarget.deleteAllCollections(currentDbName);
 
-    let collectionsCounter = 0;
+    const command = `mongorestore --uri '${currentUrl}' --gzip --archive=${dumpPath} --nsFrom='${prodDbName}.*' --nsTo='${currentDbName}.*' --nsInclude='${prodDbName}.*'`;
 
-    for await (const collection of prodDbCollections) {
-      const {
-        collectionName,
-      } = collection;
+    await exec(command);
 
-      if (!collectionName.startsWith('system.')) {
+    console.log(chalk.bgGreen(`-->> Successfully restored collections from Prod to ${replicateTo}`));
 
-        const results = await dbHelperSource.getContentOfCollection(collection);
-
-        if (results.length > 0) {
-          await dbHelperTarget.deleteCollection(currentDbName, collectionName);
-          await dbHelperTarget.addDocumentsToCollection(currentDbName, collectionName, results);
-
-          collectionsCounter++;
-        }
-      }
-    }
-
-    console.log(chalk.bgGreen(`-->> Successfully restored ${collectionsCounter} collections from Prod to ${replicateTo}`));
   } catch (err) {
     console.log(chalk.bgRed('Error in DB replication.'));
     throw new Error(getErrorMessage(err));
@@ -203,18 +206,18 @@ const main = async (): Promise<void> => {
       throw new Error('Aborting.');
     }
 
-    const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Test and replicate all Blobs from Prod to test. Are you sure you want to continue?');
+    const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Test/Local and replicate all Blobs from Prod to Test/Local. Are you sure you want to continue?');
 
     if (!askForProceed2) {
       throw new Error('Aborting.');
     }
 
-    // get prod db data
-    const prodCollections = await dbHelperSource.getCollections(prodDbName);
+    // create db dump to local system
+    await dbDump();
 
     // replicate
-    await replicateDb('test', dbHelperSource, prodCollections);
-    await replicateDb('local', dbHelperSource, prodCollections);
+    await replicateDb('test');
+    await replicateDb('local');
     await replicateBlob('test');
     await replicateBlob('local');
 

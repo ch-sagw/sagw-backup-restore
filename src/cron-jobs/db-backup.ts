@@ -7,64 +7,57 @@
  * - OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT
  */
 
+import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
-import { EJSON } from 'bson';
 import { S3Helper } from '@/helpers/s3';
-import { DbHelper } from '@/helpers/db';
 import { dateString } from '@/helpers/date';
 import config from '@/config';
 import { getErrorMessage } from '@/helpers/try-catch-error';
 import sendSlackMessage from '@/helpers/slack';
+import { exec } from '@/helpers/promisifyExec';
 
 dotenv.config({
   quiet: true,
 });
 
 const main = async (): Promise<void> => {
-
-  const dbHelper = new DbHelper();
-
   try {
-    const s3Helper = new S3Helper();
+    if (!process.env.DATABASE_URI) {
+      throw new Error('Aborting. DATABASE_URI is not defined in env.');
+    }
 
+    const s3Helper = new S3Helper();
     const bucketName = `${dateString()}-${config.dbBackupBucketPrefix}`;
+
+    if (!fs.existsSync(config.dbBackupTmpDir)) {
+      fs.mkdirSync(config.dbBackupTmpDir);
+    }
+
+    /* eslint-disable @typescript-eslint/naming-convention */
+    const __dirname = path.resolve(config.dbBackupTmpDir);
+    /* eslint-enable @typescript-eslint/naming-convention */
+    const dumpPath = path.resolve(__dirname, bucketName);
 
     await s3Helper.createBucket(bucketName);
 
-    if (!process.env.DATABASE_NAME) {
-      throw new Error('Aborting. DATABASE_NAME is not defined in env.');
-    }
+    // create mongodump (binary)
+    const command = `mongodump --uri '${process.env.DATABASE_URI}' --gzip --archive=${dumpPath}`;
 
-    const collections = await dbHelper.getCollections(process.env.DATABASE_NAME);
-    let collectionBackupCount = 0;
+    await exec(command);
 
-    if (!collections) {
-      throw new Error('Aborting. No collections found in db.');
-    }
+    // save dump to S3
+    const readStream = fs.createReadStream(dumpPath);
 
-    for await (const collection of collections) {
-      const {
-        collectionName,
-      } = collection;
+    const params = {
+      Body: readStream,
+      Bucket: bucketName,
+      Key: config.dbBackupName,
+    };
 
-      if (!collectionName.startsWith('system.')) {
-        const results = await dbHelper.getContentOfCollection(collection);
+    await s3Helper.addObject(params);
 
-        if (results.length > 0) {
-          collectionBackupCount++;
-
-          const params = {
-            Body: EJSON.stringify(results),
-            Bucket: bucketName,
-            Key: `${collectionName}.json`,
-          };
-
-          await s3Helper.addObject(params);
-        }
-      }
-    }
-
-    const mailMessage = `Successfully backed up ${collectionBackupCount} collections from MongoDb to OVH S3`;
+    const mailMessage = 'Successfully backed up collections from MongoDb to OVH S3';
 
     await sendSlackMessage([
       ':large_green_circle: *DB Backup done*',
@@ -78,13 +71,8 @@ const main = async (): Promise<void> => {
     await sendSlackMessage([':warning: *Backup failure!* MongoDB to OVH S3'], true);
 
     throw new Error(getErrorMessage(error));
-  } finally {
-    await dbHelper.getClient()
-      ?.close();
   }
 };
-
-// export default main;
 
 /* eslint-disable @typescript-eslint/no-floating-promises */
 main();

@@ -10,7 +10,6 @@ import {
   Db,
   type Document,
   MongoClient,
-  type WithId,
 } from 'mongodb';
 
 export class DbHelper {
@@ -50,14 +49,6 @@ export class DbHelper {
     return collections;
   };
 
-  public getAllDocumentsOfCollection = async (collection: Collection): Promise<WithId<Document>[] | undefined> => {
-    await this.connect();
-    const results = await collection.find({})
-      .toArray();
-
-    return results;
-  };
-
   public deleteCollection = async (dbName: string, collectionName: string): Promise<void> => {
     await this.connect();
     const db = await this.getDb(dbName);
@@ -86,20 +77,4 @@ export class DbHelper {
     await Promise.all(promises);
   };
 
-  public addDocumentsToCollection = async (dbName: string, collectionName: string, items: any): Promise<void> => {
-    await this.connect();
-    const db = await this.getDb(dbName);
-
-    await db?.collection(collectionName)
-      .insertMany(items);
-  };
-
-  // todo: add return type
-  public getContentOfCollection = async (collection: Collection): Promise<any> => {
-    await this.connect();
-    const results = await collection.find({})
-      .toArray();
-
-    return results;
-  };
 }

@@ -9,14 +9,15 @@
 
 import chalk from 'chalk';
 import dotenv from 'dotenv';
-import { EJSON } from 'bson';
 import { S3Helper } from '@/helpers/s3';
-import { DbHelper } from '@/helpers/db';
 import config from '@/config';
 import {
   inquirerAskBucketToRestore,
   inquirerAskForProceed,
 } from '@/helpers/inquirer';
+import { DbHelper } from '@/helpers/db';
+import fs from 'fs';
+import { exec } from '@/helpers/promisifyExec';
 
 dotenv.config({
   quiet: true,
@@ -43,7 +44,7 @@ const main = async (): Promise<void> => {
     const selectedBucket = await inquirerAskBucketToRestore(sortedBuckets);
     const allObjectsInBucket = await s3Helper.listObjectsOfBucket(selectedBucket);
 
-    const finalConfirmationMessage = `I am about to restore ${chalk.green(allObjectsInBucket.length)} collections from S3 Bucket named ${chalk.green(selectedBucket)} to MongoDB. Are you sure you want to continue?`;
+    const finalConfirmationMessage = `I am about to restore all collections from S3 Bucket named ${chalk.green(selectedBucket)} to MongoDB. Are you sure you want to continue?`;
     const finalConfirmation = await inquirerAskForProceed(finalConfirmationMessage);
 
     if (!finalConfirmation) {
@@ -52,40 +53,61 @@ const main = async (): Promise<void> => {
       return;
     }
 
+    if (!process.env.DATABASE_URI) {
+      console.log('Aborting. DATABASE_URI is not defined in env.');
+
+      return;
+    }
+
+    // we expect excatly 1 object in the bucket with the name
+    // saved in config.dbBackupName
+    if (allObjectsInBucket.length !== 1) {
+      console.log('Aborting. There should only be 1 binary file in the backup bucket');
+
+      return;
+    }
+
+    const [backupBinaryFileName] = allObjectsInBucket;
+
+    if (backupBinaryFileName && backupBinaryFileName !== config.dbBackupName) {
+      console.log(`Aborting. The provided backup name (${backupBinaryFileName}) should be named ${config.dbBackupName}`);
+
+      return;
+    }
+
+    // get backup file and download to tmp dir
+
+    const backupBinaryFile = await s3Helper.getObject(selectedBucket, backupBinaryFileName as string, true);
+
+    if (!backupBinaryFile) {
+      console.log('Aborting: was not able to get backup object');
+
+      return;
+    }
+
+    if (!fs.existsSync(config.dbBackupTmpDir)) {
+      fs.mkdirSync(config.dbBackupTmpDir);
+    }
+
+    const buf = Buffer.from(backupBinaryFile, 'base64');
+    const localPath = `${config.dbBackupTmpDir}/${backupBinaryFileName}`;
+
+    fs.writeFileSync(localPath, buf);
+
+    // delete collections
     if (!process.env.DATABASE_NAME) {
       console.log('Aborting. DATABASE_NAME is not defined in env.');
 
       return;
     }
 
-    await Promise.all(allObjectsInBucket.map(async (object) => {
-      if (object) {
+    await dbHelper.deleteAllCollections(process.env.DATABASE_NAME);
 
-        const collectionNameSplit = object.split('.json');
+    // mongorestore
 
-        if (!process.env.DATABASE_NAME) {
-          throw new Error('Fatal: process.env.DATABASE_NAME is not defined');
-        }
+    const command = `mongorestore --uri '${process.env.DATABASE_URI}' --gzip --archive=${localPath}`;
 
-        if (collectionNameSplit.length === 2) {
-          const [collectionName] = collectionNameSplit;
-          const objectData = await s3Helper.getObject(selectedBucket, object, false);
-
-          if (!objectData) {
-            throw new Error(`Fatal: was not able to get object with the specified name: ${selectedBucket}`);
-          }
-
-          await dbHelper.deleteCollection(process.env.DATABASE_NAME, collectionName);
-
-          const parsed = EJSON.parse(objectData);
-
-          if (parsed.length > 0) {
-            await dbHelper.addDocumentsToCollection(process.env.DATABASE_NAME, collectionName, parsed);
-          }
-
-        }
-      }
-    }));
+    await exec(command);
 
     console.log(chalk.bgGreen('-->> Restore done: OVH S3 to MongoDB'));
 
