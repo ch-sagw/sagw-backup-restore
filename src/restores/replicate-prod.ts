@@ -155,27 +155,39 @@ const main = async (): Promise<void> => {
       throw new Error('Env-Var DATABASE_NAME missing in prod environment.');
     }
 
-    if (!localDBUri || !testDBUri || !prodDBUri) {
-      throw new Error('Env-Var DATABASE_URI missing in one or more environments.');
-    }
+    if (process.env.CI) {
+      if (!testDBUri || !prodDBUri) {
+        throw new Error('Env-Var DATABASE_URI missing in one or more environments.');
+      }
 
-    if (!testBlobToken || !localBlobToken || !prodBlobToken) {
-      throw new Error('Env-Var BLOB_READ_WRITE_TOKEN missing in one or more environments.');
-    }
+      if (!testBlobToken || !prodBlobToken) {
+        throw new Error('Env-Var BLOB_READ_WRITE_TOKEN missing in one or more environments.');
+      }
 
-    if (
-      localDBUri === testDBUri ||
-      testDBUri === prodDBUri ||
-      localDBUri === prodDBUri
-    ) {
-      throw new Error('Env-Var mismatch for for DATABASE_URI. Aborting.');
-    }
+      if (testDBUri === prodDBUri) {
+        throw new Error('Env-Var mismatch for for DATABASE_URI. Aborting.');
+      }
 
-    if (
-      testBlobToken === prodBlobToken ||
-      localBlobToken === prodBlobToken
-    ) {
-      throw new Error('Env-Var mismatch for for BLOB_READ_WRITE_TOKEN. Aborting.');
+      if (testBlobToken === prodBlobToken) {
+        throw new Error('Env-Var mismatch for for BLOB_READ_WRITE_TOKEN. Aborting.');
+      }
+
+    } else {
+      if (!localDBUri || !prodDBUri) {
+        throw new Error('Env-Var DATABASE_URI missing in one or more environments.');
+      }
+
+      if (!localBlobToken || !prodBlobToken) {
+        throw new Error('Env-Var BLOB_READ_WRITE_TOKEN missing in one or more environments.');
+      }
+
+      if (localDBUri === prodDBUri) {
+        throw new Error('Env-Var mismatch for for DATABASE_URI. Aborting.');
+      }
+
+      if (localBlobToken === prodBlobToken) {
+        throw new Error('Env-Var mismatch for for BLOB_READ_WRITE_TOKEN. Aborting.');
+      }
     }
 
     dbHelperSource = new DbHelper();
