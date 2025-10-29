@@ -30,6 +30,8 @@ const dbDump = async (): Promise<void> => {
 };
 
 const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void> => {
+  // from prod to current
+
   const prodUrl = process.env.DATABASE_URI;
   const prodDbName = process.env.DATABASE_NAME;
 
@@ -49,7 +51,7 @@ const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void>
     throw new Error('Target DB Name is not defined in Env. Aborting.');
   }
 
-  const dbHelperTarget = new DbHelper();
+  const dbHelperTarget = new DbHelper(currentUrl);
 
   try {
     /* eslint-disable @typescript-eslint/naming-convention */
