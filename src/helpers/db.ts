@@ -15,9 +15,15 @@ import {
 export class DbHelper {
   private _client: MongoClient | undefined;
 
-  public constructor () {
-    if (process.env.DATABASE_URI) {
-      this._client = new MongoClient(process.env.DATABASE_URI);
+  public constructor (dbUriParam?: string) {
+    let dbUri = dbUriParam;
+
+    if (!dbUri && process.env.DATABASE_URI) {
+      dbUri = process.env.DATABASE_URI;
+    }
+
+    if (dbUri) {
+      this._client = new MongoClient(dbUri);
     }
   }
 
