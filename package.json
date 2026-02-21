@@ -11,8 +11,7 @@
     "restore:blob": "cross-env ENV=prod tsx ./src/restores/blob-restore",
     "restore:db": "cross-env ENV=prod tsx ./src/restores/db-restore",
     "maintenance": "cross-env ENV=prod tsx ./src/maintenance/index",
-    "replicate:prod": "tsx ./src/restores/replicate-prod",
-    "temp:replicte:local:to:prod": "tsx ./src/restores/temp-replicate-local"
+    "replicate:prod:to:local": "tsx ./src/restores/replicate-prod"
   },
   "author": "",
   "license": "ISC",
