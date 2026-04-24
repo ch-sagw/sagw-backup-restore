@@ -1,6 +1,5 @@
 import chalk from 'chalk';
 import { DbHelper } from '@/helpers/db';
-import { inquirerAskForProceed } from '@/helpers/inquirer';
 import { getErrorMessage } from '@/helpers/try-catch-error';
 import {
   addBlob,
@@ -24,17 +23,15 @@ const dbDump = async (): Promise<void> => {
   const __dirname = path.resolve(config.dbBackupTmpDir);
   /* eslint-enable @typescript-eslint/naming-convention */
   const dumpPath = path.resolve(__dirname, config.dbBackupName);
-  const command = `mongodump --uri '${process.env.DATABASE_URI}' --gzip --archive=${dumpPath}`;
+  const command = `mongodump --uri '${process.env.DATABASE_URI_READONLY}' --gzip --archive=${dumpPath}`;
 
   await exec(command);
 };
 
-const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void> => {
-  // from prod to current
-
-  const prodUrl = process.env.DATABASE_URI;
-  const prodDbName = process.env.DATABASE_NAME;
-
+const getTargetUrlAndDbNameForReplicationTarget = (replicateTo: InterfaceReplicationEnvs): {
+  dbUrl?: string;
+  dbName?: string;
+} => {
   let currentUrl = process.env.DATABASE_URI_TEST;
   let currentDbName = process.env.DATABASE_NAME_TEST;
 
@@ -43,12 +40,33 @@ const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void>
     currentDbName = process.env.DATABASE_NAME_LOCAL;
   }
 
+  return {
+    dbName: currentDbName,
+    dbUrl: currentUrl,
+  };
+};
+
+const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void> => {
+  // from prod to current
+
+  const prodUrl = process.env.DATABASE_URI_READONLY;
+  const prodDbName = process.env.DATABASE_NAME;
+
+  const {
+    dbName: currentDbName,
+    dbUrl: currentUrl,
+  } = getTargetUrlAndDbNameForReplicationTarget(replicateTo);
+
   if (prodUrl === currentUrl) {
-    throw new Error('Env-Var mismatch for DATABASE_URI. Aborting.');
+    throw new Error('Env-Var mismatch for DATABASE_URI_READONLY. Aborting.');
   }
 
   if (!currentDbName) {
     throw new Error('Target DB Name is not defined in Env. Aborting.');
+  }
+
+  if (!currentUrl) {
+    throw new Error('Could not figure out currentUrl. Aborting.');
   }
 
   const dbHelperTarget = new DbHelper(currentUrl);
@@ -146,7 +164,7 @@ const main = async (): Promise<void> => {
     const testDBUri = process.env.DATABASE_URI_TEST;
     const testBlobToken = process.env.BLOB_READ_WRITE_TOKEN_TEST;
 
-    const prodDBUri = process.env.DATABASE_URI;
+    const prodDBUri = process.env.DATABASE_URI_READONLY;
     const prodBlobToken = process.env.BLOB_READ_WRITE_TOKEN;
     const prodDbName = process.env.DATABASE_NAME;
 
@@ -159,7 +177,7 @@ const main = async (): Promise<void> => {
 
     if (process.env.CI) {
       if (!testDBUri || !prodDBUri) {
-        throw new Error('Env-Var DATABASE_URI missing in one or more environments.');
+        throw new Error('Env-Var DATABASE_URI_READONLY missing in one or more environments.');
       }
 
       if (!testBlobToken || !prodBlobToken) {
@@ -167,7 +185,7 @@ const main = async (): Promise<void> => {
       }
 
       if (testDBUri === prodDBUri) {
-        throw new Error('Env-Var mismatch for for DATABASE_URI. Aborting.');
+        throw new Error('Env-Var mismatch for for DATABASE_URI_READONLY. Aborting.');
       }
 
       if (testBlobToken === prodBlobToken) {
@@ -176,7 +194,7 @@ const main = async (): Promise<void> => {
 
     } else {
       if (!localDBUri || !prodDBUri) {
-        throw new Error('Env-Var DATABASE_URI missing in one or more environments.');
+        throw new Error('Env-Var DATABASE_URI_READONLY missing in one or more environments.');
       }
 
       if (!localBlobToken || !prodBlobToken) {
@@ -184,7 +202,7 @@ const main = async (): Promise<void> => {
       }
 
       if (localDBUri === prodDBUri) {
-        throw new Error('Env-Var mismatch for for DATABASE_URI. Aborting.');
+        throw new Error('Env-Var mismatch for for DATABASE_URI_READONLY. Aborting.');
       }
 
       if (localBlobToken === prodBlobToken) {
@@ -192,37 +210,37 @@ const main = async (): Promise<void> => {
       }
     }
 
-    dbHelperSource = new DbHelper();
+    let replicateTo: InterfaceReplicationEnvs;
 
-    if (!process.env.CI) {
-      const askForProceed = await inquirerAskForProceed('I will erase all collections in the local DB, and replicate the collections from Prod to the Local DB. Are you sure you want to continue?');
-
-      if (!askForProceed) {
-        throw new Error('Aborting.');
-      }
-
-      const askForProceed2 = await inquirerAskForProceed('I will delete all Blob data on Local and replicate all Blobs from Prod to Local. Are you sure you want to continue?');
-
-      if (!askForProceed2) {
-        throw new Error('Aborting.');
-      }
+    if (process.env.CI) {
+      replicateTo = 'test';
+    } else {
+      replicateTo = 'local';
     }
+
+    const {
+      dbUrl,
+    } = getTargetUrlAndDbNameForReplicationTarget(replicateTo);
+
+    if (!dbUrl) {
+      throw new Error('Could not figure out dbUrl. Aborting.');
+    }
+
+    dbHelperSource = new DbHelper(dbUrl);
 
     // create db dump to local system
+    console.log(chalk.bgGrey('1. Dumping local DB...'));
     await dbDump();
+    console.log(chalk.bgGreen('--> Local DB dumbed ...'));
 
     // replicate
-    if (process.env.CI) {
-      await replicateDb('test');
-    } else {
-      await replicateDb('local');
-    }
+    console.log(chalk.bgGrey('2. Replicate Prod DB to local ...'));
 
-    if (process.env.CI) {
-      await replicateBlob('test');
-    } else {
-      await replicateBlob('local');
-    }
+    await replicateDb(replicateTo);
+
+    console.log(chalk.bgGrey('3. Replicate Prod Blob to local ...'));
+
+    await replicateBlob(replicateTo);
 
   } catch (err) {
     console.log(chalk.bgRed(err));

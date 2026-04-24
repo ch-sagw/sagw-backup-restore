@@ -24,7 +24,13 @@ dotenv.config({
 });
 
 const main = async (): Promise<void> => {
-  const dbHelper = new DbHelper();
+  if (!process.env.DATABASE_URI) {
+    console.log('Aborting. DATABASE_URI is not defined in env.');
+
+    return;
+  }
+
+  const dbHelper = new DbHelper(process.env.DATABASE_URI);
 
   try {
 
@@ -67,12 +73,6 @@ const main = async (): Promise<void> => {
 
         return;
       }
-    }
-
-    if (!process.env.DATABASE_URI) {
-      console.log('Aborting. DATABASE_URI is not defined in env.');
-
-      return;
     }
 
     // we expect excatly 1 object in the bucket with the name

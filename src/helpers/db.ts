@@ -1,8 +1,3 @@
-/**
- * Requires the following env-variables:
- * - DATABASE_URI
- */
-
 import '../../.env/index';
 
 import {
@@ -15,16 +10,8 @@ import {
 export class DbHelper {
   private _client: MongoClient | undefined;
 
-  public constructor (dbUriParam?: string) {
-    let dbUri = dbUriParam;
-
-    if (!dbUri && process.env.DATABASE_URI) {
-      dbUri = process.env.DATABASE_URI;
-    }
-
-    if (dbUri) {
-      this._client = new MongoClient(dbUri);
-    }
+  public constructor (dbUriParam: string) {
+    this._client = new MongoClient(dbUriParam);
   }
 
   public connect = async (): Promise<void> => {

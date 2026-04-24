@@ -1,7 +1,7 @@
 /**
  * Requires the following env-variables:
  * - DATABASE_NAME
- * - DATABASE_URI
+ * - DATABASE_URI_READONLY
  * - OVH_OS_ACCESS_PUBLIC_KEY
  * - OVH_OS_ACCESS_PRIVATE_KEY
  * - OVH_OS_IMAGES_BACKUP_CONTAINER_ENDPOINT
@@ -23,8 +23,8 @@ dotenv.config({
 
 const main = async (): Promise<void> => {
   try {
-    if (!process.env.DATABASE_URI) {
-      throw new Error('Aborting. DATABASE_URI is not defined in env.');
+    if (!process.env.DATABASE_URI_READONLY) {
+      throw new Error('Aborting. DATABASE_URI_READONLY is not defined in env.');
     }
 
     const s3Helper = new S3Helper();
@@ -42,7 +42,7 @@ const main = async (): Promise<void> => {
     await s3Helper.createBucket(bucketName);
 
     // create mongodump (binary)
-    const command = `mongodump --uri '${process.env.DATABASE_URI}' --gzip --archive=${dumpPath}`;
+    const command = `mongodump --uri '${process.env.DATABASE_URI_READONLY}' --gzip --archive=${dumpPath}`;
 
     await exec(command);
 
