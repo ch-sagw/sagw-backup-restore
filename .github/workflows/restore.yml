@@ -1,4 +1,4 @@
-name: Restore Prod from Backup
+name: 🚨‼️Restore Prod from Backup
 
 permissions:
   checks: write
