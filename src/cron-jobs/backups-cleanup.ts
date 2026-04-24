@@ -52,7 +52,9 @@ const main = async (): Promise<void> => {
   } catch (error) {
     await sendSlackMessage([':warning: *Backups cleanup failure!*'], true);
 
-    throw new Error(getErrorMessage(error));
+    throw new Error(getErrorMessage(error), {
+      cause: error,
+    });
   }
 };
 

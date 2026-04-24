@@ -70,7 +70,9 @@ const main = async (): Promise<void> => {
   } catch (error) {
     await sendSlackMessage([':warning: *Backup failure!* MongoDB to OVH S3'], true);
 
-    throw new Error(getErrorMessage(error));
+    throw new Error(getErrorMessage(error), {
+      cause: error,
+    });
   }
 };
 

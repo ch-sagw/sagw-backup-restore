@@ -87,7 +87,9 @@ const replicateDb = async (replicateTo: InterfaceReplicationEnvs): Promise<void>
 
   } catch (err) {
     console.log(chalk.bgRed('Error in DB replication.'));
-    throw new Error(getErrorMessage(err));
+    throw new Error(getErrorMessage(err), {
+      cause: err,
+    });
   } finally {
     await dbHelperTarget?.getClient()
       ?.close();
@@ -147,7 +149,9 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
 
   } catch (err) {
     console.log(chalk.bgRed('Error in Blob replication.'));
-    throw new Error(getErrorMessage(err));
+    throw new Error(getErrorMessage(err), {
+      cause: err,
+    });
   }
 
 };
