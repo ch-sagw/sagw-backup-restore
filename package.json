@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint .",
+    "type-check": "tsc",
     "backup:db": "cross-env ENV=prod tsx ./src/cron-jobs/db-backup",
     "backup:blob": "cross-env ENV=prod tsx ./src/cron-jobs/blob-backup",
     "backup:cleanup": "cross-env ENV=prod tsx ./src/cron-jobs/backups-cleanup",

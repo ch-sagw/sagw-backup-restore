@@ -1,6 +1,7 @@
 node_modules
 prod-download
 tmp
+*.tsbuildinfo
 
 # local env files
 /.env/.env*
