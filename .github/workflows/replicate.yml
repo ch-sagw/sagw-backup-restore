@@ -20,14 +20,9 @@ env:
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Type "YES REPLICATE" to confirm replication. CAUTION: THIS CAN NOT BE UNDONE!'
-        required: true
 
 jobs:
   restore:
-    if: ${{ github.event.inputs.confirm == 'YES REPLICATE' }}
     runs-on: ubuntu-latest
 
     steps:
