@@ -128,7 +128,9 @@ const main = async (): Promise<void> => {
     console.log(chalk.bgGreen('-->> Restore done: OVH S3 to MongoDB'));
 
   } catch (error) {
-    console.log(chalk.bgRed(error));
+    throw new Error(error as string, {
+      cause: error,
+    });
   } finally {
     await dbHelper?.getClient()
       ?.close();
