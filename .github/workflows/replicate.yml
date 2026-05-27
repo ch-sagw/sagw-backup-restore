@@ -19,6 +19,8 @@ env:
   BACKUP_RESTORE_PREFIX: ${{ secrets.BACKUP_RESTORE_PREFIX }}
 
 on:
+  schedule:
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 jobs:
