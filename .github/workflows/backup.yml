@@ -18,7 +18,7 @@ env:
 
 on:
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 22 * * *"
   workflow_dispatch:
 jobs:
   backup-db:
