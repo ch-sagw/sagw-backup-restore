@@ -14,6 +14,9 @@ import {
   inquirerAskBucketToRestore,
   inquirerAskForProceed,
 } from '@/helpers/inquirer';
+import {
+  DEFAULT_CONCURRENCY, mapWithConcurrency,
+} from '@/helpers/concurrency';
 
 const main = async (): Promise<void> => {
   try {
@@ -68,7 +71,7 @@ const main = async (): Promise<void> => {
 
     await blobHelpers.deleteAllBlobs();
 
-    await Promise.all(allObjectsInBucket.map(async (object) => {
+    await mapWithConcurrency(allObjectsInBucket, DEFAULT_CONCURRENCY, async (object) => {
       if (object) {
         const objectData = await s3Helper.getObject(selectedBucket, object, true);
 
@@ -80,7 +83,7 @@ const main = async (): Promise<void> => {
 
         await blobHelpers.addBlob(object, buf);
       }
-    }));
+    });
 
     // integrity check: check if all data was restored
     const newBlobs = await blobHelpers.getAllBlobs();

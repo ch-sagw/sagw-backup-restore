@@ -20,6 +20,9 @@ import {
 } from '@aws-sdk/client-s3';
 
 import { Upload } from '@aws-sdk/lib-storage';
+import {
+  DEFAULT_CONCURRENCY, mapWithConcurrency,
+} from './concurrency';
 import { sortBucketsNewestFirst } from './date';
 
 export class S3Helper {
@@ -156,10 +159,10 @@ export class S3Helper {
   public deleteAllObjects = async (bucketName: string): Promise<void> => {
     const objects = await this.listObjectsOfBucket(bucketName);
 
-    await Promise.all(objects.map(async (object) => {
+    await mapWithConcurrency(objects, DEFAULT_CONCURRENCY, async (object) => {
       if (object) {
         await this.deleteObject(bucketName, object);
       }
-    }));
+    });
   };
 }

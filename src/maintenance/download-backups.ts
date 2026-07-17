@@ -6,6 +6,9 @@ import {
   inquirerAskMultipleChoice,
 } from '@/helpers/inquirer';
 import { S3Helper } from '@/helpers/s3';
+import {
+  DEFAULT_CONCURRENCY, mapWithConcurrency,
+} from '@/helpers/concurrency';
 
 export const downloadBackups = async (): Promise<void> => {
   try {
@@ -54,7 +57,7 @@ export const downloadBackups = async (): Promise<void> => {
 
         const allObjectsInBucket = await s3Helper.listObjectsOfBucket(bucket);
 
-        await Promise.all(allObjectsInBucket.map(async (object) => {
+        await mapWithConcurrency(allObjectsInBucket, DEFAULT_CONCURRENCY, async (object) => {
           if (object) {
             const objectData = await s3Helper.getObject(bucket, object, true);
 
@@ -67,7 +70,7 @@ export const downloadBackups = async (): Promise<void> => {
             fs.writeFileSync(`${config.maintenanceDownloadFolder}/${selection}/${bucket}/${object}`, buf);
 
           }
-        }));
+        });
       }
     }
 

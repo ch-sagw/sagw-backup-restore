@@ -12,6 +12,9 @@ import * as blobHelpers from '@/helpers/blob';
 import { S3Helper } from '@/helpers/s3';
 import { dateString } from '@/helpers/date';
 import config from '@/config';
+import {
+  DEFAULT_CONCURRENCY, mapWithConcurrency,
+} from '@/helpers/concurrency';
 import { getErrorMessage } from '@/helpers/try-catch-error';
 import sendSlackMessage from '@/helpers/slack';
 
@@ -25,7 +28,7 @@ const main = async (): Promise<void> => {
 
     await s3Helper.createBucket(bucketName);
 
-    await Promise.all(blobs.map(async (blob) => {
+    await mapWithConcurrency(blobs, DEFAULT_CONCURRENCY, async (blob) => {
       if (blob) {
         const res = await fetch(blob.url);
         const params = {
@@ -38,7 +41,7 @@ const main = async (): Promise<void> => {
           await s3Helper.addObject(params);
         }
       }
-    }));
+    });
 
     // integrity check
     const bucketItemsCount = await s3Helper.listObjectsOfBucket(bucketName);

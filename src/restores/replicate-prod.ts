@@ -2,6 +2,9 @@ import chalk from 'chalk';
 import { DbHelper } from '@/helpers/db';
 import { getErrorMessage } from '@/helpers/try-catch-error';
 import {
+  DEFAULT_CONCURRENCY, mapWithConcurrency,
+} from '@/helpers/concurrency';
+import {
   addBlob,
   deleteAllBlobs,
   getAllBlobs,
@@ -133,7 +136,7 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
 
     let blobCounter = 0;
 
-    await Promise.all(blobsProd.map(async (blob) => {
+    await mapWithConcurrency(blobsProd, DEFAULT_CONCURRENCY, async (blob) => {
       if (blob) {
         const res = await fetch(blob.url);
 
@@ -143,7 +146,7 @@ const replicateBlob = async (replicateTo: InterfaceReplicationEnvs): Promise<voi
           blobCounter++;
         }
       }
-    }));
+    });
 
     console.log(chalk.bgGreen(`-->> Successfully restored ${blobCounter} blobs from Prod to ${replicateTo}`));
 
