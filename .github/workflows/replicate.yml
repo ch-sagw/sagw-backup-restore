@@ -46,8 +46,10 @@ jobs:
           wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-x86_64-100.6.1.deb
           sudo apt install ./mongodb-database-tools-*-100.6.1.deb
 
-      - name: Replicate
-        run: npm run replicate:prod
-        env:
-          CI: true
+      # TODO: while testing the assets-cleanup routines, we should not
+      # overwrite the content of the test-env
+      # - name: Replicate
+      #   run: npm run replicate:prod
+      #   env:
+      #     CI: true
 
