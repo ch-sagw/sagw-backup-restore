@@ -15,7 +15,7 @@ export const inquirerAskForProceed = async (message: string): Promise<boolean> =
       ],
       message: 'Are you sure you want to continue?',
       name: 'proceed',
-      type: 'list',
+      type: 'select',
     },
   ]);
 
@@ -29,7 +29,7 @@ export const inquirerAskBucketToRestore = async (buckets: (string | undefined)[]
       choices: buckets.filter((bucket) => (bucket !== undefined)),
       message: 'Select the backup which should be restored.',
       name: 'bucket',
-      type: 'list',
+      type: 'select',
     },
   ]);
 
@@ -45,7 +45,7 @@ export const inquirerAskForOption = async (message: string, options: Record<stri
       choices,
       message,
       name: 'selectedOption',
-      type: 'list',
+      type: 'select',
     },
   ]);
 
